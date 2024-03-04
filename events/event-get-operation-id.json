@@ -1,6 +1,7 @@
 {
     "httpMethod": "GET",
     "pathParameters": {
-        "id": "id1"
+        "source": "C1",
+        "target": "F7"
     }
 }

@@ -5,7 +5,8 @@
     "private": true,
     "dependencies": {
         "@aws-sdk/client-dynamodb": "^3.398.0",
-        "@aws-sdk/lib-dynamodb": "^3.398.0"
+        "@aws-sdk/lib-dynamodb": "^3.398.0",
+        "uuid": "^9.0.1"
     },
     "devDependencies": {
         "@types/aws-lambda": "^8.10.134",
@@ -16,8 +17,7 @@
     },
     "scripts": {
         "test": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js",
-        "build": "npx tsc",
-        "deploy": "npm run build && sam deploy"      
+        "deploy": "sam deploy"
     },
     "jest": {
         "testMatch": [
