@@ -11,10 +11,10 @@ Resources:
   # https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
 
   # This is a Lambda function config associated with the source code: get-all-items.js
-  getAllItemsFunction:
+  getKnightPathFunction:
     Type: AWS::Serverless::Function
     Properties:
-      Handler: src/handlers/get-all-items.getAllItemsHandler
+      Handler: src/handlers/get-knight-path.getKnightPath
       Runtime: nodejs20.x
       Architectures:
       - x86_64
@@ -34,7 +34,7 @@ Resources:
         Api:
           Type: Api
           Properties:
-            Path: /
+            Path: /knightpath
             Method: GET
   # Each Lambda function is defined by properties:
   # https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
@@ -62,10 +62,10 @@ Resources:
   # https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
 
   # This is a Lambda function config associated with the source code: put-item.js
-  getOperationFunction:
+  postOperationFunction:
     Type: AWS::Serverless::Function
     Properties:
-      Handler: src/handlers/get-operation-id.getOperationId
+      Handler: src/handlers/post-operation-id.postOperationId
       Runtime: nodejs20.x
       Architectures:
       - x86_64
@@ -76,6 +76,12 @@ Resources:
         # Give Create/Read/Update/Delete Permissions to the SampleTable
       - DynamoDBCrudPolicy:
           TableName: !Ref SampleTable
+      # Custom policy to allow invoking the computeShortestPathFunction
+      - Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action: lambda:InvokeFunction
+            Resource: !GetAtt computeShortestPathFunction.Arn
       Environment:
         Variables:
           # Make table name accessible as environment variable from function code during execution
@@ -84,8 +90,8 @@ Resources:
         Api:
           Type: Api
           Properties:
-            Path: /knights-path
-            Method: GET
+            Path: /knightpath
+            Method: POST
   # Simple syntax to create a DynamoDB table with a single attribute primary key, more in
   # https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlesssimpletable
 

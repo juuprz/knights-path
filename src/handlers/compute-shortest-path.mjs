@@ -10,12 +10,14 @@ const tableName = process.env.SAMPLE_TABLE;
 function shortestPath(source, dest) {
   // Convert algebraic notation to zero-based coordinates
   function toCoords(algebraic) {
-    return { x: algebraic.charCodeAt(0) - 'a'.charCodeAt(0), y: parseInt(algebraic[1], 10) - 1 };
+    const res = { x: algebraic.toLowerCase().charCodeAt(0) - 'a'.charCodeAt(0), y: parseInt(algebraic[1], 10) - 1 };
+    return res
   }
 
   // Convert zero-based coordinates to algebraic notation
   function toAlgebraic(coords) {
-    return String.fromCharCode('a'.charCodeAt(0) + coords.x) + (coords.y + 1);
+    const res = String.fromCharCode('a'.charCodeAt(0) + coords.x) + (coords.y + 1);
+    return res
   }
 
   // Check if the given coordinates are within the bounds of the chessboard
@@ -31,43 +33,45 @@ function shortestPath(source, dest) {
     { x: 2, y: -1 }, { x: 2, y: 1 }
   ];
 
+  // Breadth-first search to find the shortest path from source to dest
   const start = toCoords(source);
+  const startPos =`${start.x},${start.y}`;
   const end = toCoords(dest);
-  const queue = [{ ...start, path: [start] }];
+  const queue = [{ ...start, path: [toAlgebraic(start)] }];
   const visited = new Set();
+  visited.add(startPos)
 
   while (queue.length > 0) {
     const current = queue.shift();
-    const currentPos = `${current.x},${current.y}`;
-
-    if (visited.has(currentPos)) continue;
-    visited.add(currentPos);
 
     if (current.x === end.x && current.y === end.y) {
-      // Convert path to algebraic notation
-      const path = current.path.map(toAlgebraic);
-      return { length: path.length - 1, path };
+      return { length: current.path.length - 1, path: current.path.join(':').toUpperCase() };
     }
 
     moves.forEach(move => {
-      const next = { x: current.x + move.x, y: current.y + move.y, path: [...current.path, { x: current.x + move.x, y: current.y + move.y }] };
-      if (isValid(next) && !visited.has(`${next.x},${next.y}`)) {
+      const next = {
+        x: current.x + move.x,
+        y: current.y + move.y,
+        path: [...current.path, toAlgebraic({ x: current.x + move.x, y: current.y + move.y })]
+      };
+      const nextPos = `${next.x},${next.y}`
+      if (isValid(next) && !visited.has(nextPos)) {
         queue.push(next);
+        visited.add(nextPos)
       }
     });
   }
-  return { length: -1, path: [] };
+  return { length: -1, path: "" };
 }
 
 // handler for compute-shortest-path - invokes the shortestPath function and updates the DynamoDB table with the result
 export const computeShortestPath = async (payload) => {
-  console.log('>>>> Invoking computeShortestPath function with payload:', payload);
-  const { length: numberOfMoves, path } = shortestPath(payload.source, payload.target);
+  const { length: numberOfMoves, path } = shortestPath(payload.starting, payload.ending);
 
   const params = {
     TableName: tableName,
     Key: { id: payload.id },
-    UpdateExpression: 'set status = :s, numberOfMoves = :n, shortestPath = :p',
+    UpdateExpression: 'set operationStatus = :s, numberOfMoves = :n, shortestPath = :p',
     ExpressionAttributeValues: {
       ':s': 'completed',
       ':n': numberOfMoves,
@@ -76,7 +80,6 @@ export const computeShortestPath = async (payload) => {
     ReturnValues: 'UPDATED_NEW'
   };
   try {
-    console.log('Updating the item...', params);
     await ddbDocClient.send(new UpdateCommand(params));
   } catch (err) {
     console.log("Error", err);

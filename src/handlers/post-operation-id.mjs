@@ -7,21 +7,17 @@ const ddbDocClient = DynamoDBDocumentClient.from(client);
 
 // Get the DynamoDB table name from environment variables
 const tableName = process.env.SAMPLE_TABLE;
+const lambdaClient = new LambdaClient({});
 
-
-const lambdaClient = new LambdaClient({ region: 'REGION' });
 const invokeCompute = async (payload) => {
-
-  console.log('>>>> Invoking second Lambda function with payload:', payload)
   const params = {
-    FunctionName: 'computeShortestPathFunction', 
+    FunctionName: 'arn:aws:lambda:us-west-1:818899096532:function:knights-path-computeShortestPathFunction-L8jof1XMnnzn', 
     InvocationType: 'Event',
     Payload: JSON.stringify(payload)
   };
 
   try {
-    const response = await lambdaClient.send(new InvokeCommand(params));
-    console.log('Second Lambda function invoked:', response);
+    const res = await lambdaClient.send(new InvokeCommand(params));
   } catch (error) {
     console.error('Error invoking second Lambda function:', error);
   }
@@ -31,9 +27,9 @@ const invokeCompute = async (payload) => {
 /**
  * Handler for HTTP Get - receives a source and target coordinate and returns an operationId
  */
-export const getOperationId = async (event) => {
+export const postOperationId = async (event) => {
   if (event.httpMethod !== 'GET') {
-    throw new Error(`getOperationId only accepts GET method, you tried: ${event.httpMethod} method.`);
+    throw new Error(`postOperationId only accepts GET method, you tried: ${event.httpMethod} method.`);
   }
 
   let source, target;
@@ -65,7 +61,7 @@ export const getOperationId = async (event) => {
     } else {
       item = { 
         id: pathId, 
-        status: "in-progress", 
+        operationStatus: "in-progress", 
         operationId: uuidv4(), 
         starting: source, 
         ending: target, 
@@ -78,7 +74,7 @@ export const getOperationId = async (event) => {
         Item: item
       }));
 
-      invokeCompute(item);
+      await invokeCompute(item);
   
       console.log("Success - item created");
     }
