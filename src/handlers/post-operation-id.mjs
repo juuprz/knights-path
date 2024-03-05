@@ -9,6 +9,7 @@ const ddbDocClient = DynamoDBDocumentClient.from(client);
 const tableName = process.env.SAMPLE_TABLE;
 const lambdaClient = new LambdaClient({});
 
+// Helper function to invoke the second Lambda function (computeShortestPathFunction) asynchronously
 const invokeCompute = async (payload) => {
   const params = {
     FunctionName: 'arn:aws:lambda:us-west-1:818899096532:function:knights-path-computeShortestPathFunction-L8jof1XMnnzn', 
@@ -17,7 +18,7 @@ const invokeCompute = async (payload) => {
   };
 
   try {
-    const res = await lambdaClient.send(new InvokeCommand(params));
+    await lambdaClient.send(new InvokeCommand(params));
   } catch (error) {
     console.error('Error invoking second Lambda function:', error);
   }
@@ -25,10 +26,10 @@ const invokeCompute = async (payload) => {
 
 
 /**
- * Handler for HTTP Get - receives a source and target coordinate and returns an operationId
+ * Handler for HTTP POST - receives a source and target coordinate and returns an operationId
  */
 export const postOperationId = async (event) => {
-  if (event.httpMethod !== 'GET') {
+  if (event.httpMethod !== 'POST') {
     throw new Error(`postOperationId only accepts GET method, you tried: ${event.httpMethod} method.`);
   }
 
@@ -43,10 +44,13 @@ export const postOperationId = async (event) => {
   }
 
   if (!source || !target) {
-    throw new Error('Missing source or target parameters.');
+    return {
+      statusCode: 400,
+      body: 'source and target are required'
+    };
   }
-  const pathId = `${source}:${target}`;
 
+  const pathId = `${source}:${target}`;
   let data, item;
 
   try {
@@ -75,16 +79,21 @@ export const postOperationId = async (event) => {
       }));
 
       await invokeCompute(item);
-  
       console.log("Success - item created");
     }
 
   } catch (err) {
     console.error("Error", err.stack);
+    return {
+      statusCode: 500,
+      body: JSON.stringify({
+        error: "An error occurred while querying the database."
+      })
+    };
   }
 
   return {
-    statusCode: 200,
+    statusCode: 201,
     body: JSON.stringify({
       message: `Operation Id ${item.operationId} was created. Please query it to find your results.`,
     })
